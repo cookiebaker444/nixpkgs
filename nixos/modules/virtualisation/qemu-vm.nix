@@ -34,7 +34,7 @@ let
       NIX_DISK_IMAGE=$(readlink -f ''${NIX_DISK_IMAGE:-${config.virtualisation.diskImage}})
 
       if ! test -e "$NIX_DISK_IMAGE"; then
-          ${qemu}/bin/qemu-img create -f qcow2 "$NIX_DISK_IMAGE" \
+          ${qemu}/bin/qemu-img create -f qcow2 -o preallocation=metadata "$NIX_DISK_IMAGE" \
             ${toString config.virtualisation.diskSize}M || exit 1
       fi
 
@@ -89,7 +89,7 @@ let
             '' else ''
             ''}
           '' else ''
-            -drive index=0,id=drive1,file=$NIX_DISK_IMAGE,if=${cfg.qemu.diskInterface},preallocation=metadata,cache=writeback,werror=report \
+            -drive index=0,id=drive1,file=$NIX_DISK_IMAGE,if=${cfg.qemu.diskInterface},cache=writeback,werror=report \
             -kernel ${config.system.build.toplevel}/kernel \
             -initrd ${config.system.build.toplevel}/initrd \
             -append "$(cat ${config.system.build.toplevel}/kernel-params) init=${config.system.build.toplevel}/init regInfo=${regInfo} ${kernelConsole} $QEMU_KERNEL_PARAMS" \
