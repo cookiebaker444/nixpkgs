@@ -618,39 +618,6 @@
   ./services/web-servers/varnish/default.nix
   ./services/web-servers/winstone.nix
   ./services/web-servers/zope2.nix
-  ./services/x11/colord.nix
-  ./services/x11/compton.nix
-  ./services/x11/unclutter.nix
-  ./services/x11/unclutter-xfixes.nix
-  ./services/x11/desktop-managers/default.nix
-  ./services/x11/display-managers/auto.nix
-  ./services/x11/display-managers/default.nix
-  ./services/x11/display-managers/gdm.nix
-  ./services/x11/display-managers/lightdm.nix
-  ./services/x11/display-managers/sddm.nix
-  ./services/x11/display-managers/slim.nix
-  ./services/x11/display-managers/xpra.nix
-  ./services/x11/hardware/libinput.nix
-  ./services/x11/hardware/multitouch.nix
-  ./services/x11/hardware/synaptics.nix
-  ./services/x11/hardware/wacom.nix
-  ./services/x11/redshift.nix
-  ./services/x11/urxvtd.nix
-  ./services/x11/window-managers/awesome.nix
-  ./services/x11/window-managers/default.nix
-  ./services/x11/window-managers/fluxbox.nix
-  ./services/x11/window-managers/icewm.nix
-  ./services/x11/window-managers/bspwm.nix
-  ./services/x11/window-managers/metacity.nix
-  ./services/x11/window-managers/none.nix
-  ./services/x11/window-managers/twm.nix
-  ./services/x11/window-managers/windowlab.nix
-  ./services/x11/window-managers/wmii.nix
-  ./services/x11/window-managers/xmonad.nix
-  ./services/x11/xautolock.nix
-  ./services/x11/xbanish.nix
-  ./services/x11/xfs.nix
-  ./services/x11/xserver.nix
   ./system/activation/activation-script.nix
   ./system/activation/top-level.nix
   ./system/boot/coredump.nix
