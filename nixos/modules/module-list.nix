@@ -157,6 +157,7 @@
   ./services/security/fprintd.nix
   ./services/security/haveged.nix
   ./services/monitoring/smartd.nix
+  ./services/desktops/accountsservice.nix
   ./services/system/cgmanager.nix
   ./services/system/cloud-init.nix
   ./services/system/dbus.nix
@@ -169,6 +170,25 @@
   ./services/ttys/gpm.nix
   ./services/ttys/kmscon.nix
   ./services/web-servers/nginx/default.nix
+  ./services/x11/colord.nix
+  ./services/x11/compton.nix
+  ./services/x11/unclutter.nix
+  ./services/x11/unclutter-xfixes.nix
+  ./services/x11/desktop-managers/default.nix
+  ./services/x11/display-managers/auto.nix
+  ./services/x11/display-managers/default.nix
+  ./services/x11/display-managers/sddm.nix
+  ./services/x11/display-managers/slim.nix
+  ./services/x11/hardware/libinput.nix
+  ./services/x11/hardware/multitouch.nix
+  ./services/x11/hardware/synaptics.nix
+  ./services/x11/hardware/wacom.nix
+  ./services/x11/redshift.nix
+  ./services/x11/urxvtd.nix
+  ./services/x11/window-managers/default.nix
+  ./services/x11/window-managers/none.nix
+  ./services/x11/xautolock.nix
+  ./services/x11/xbanish.nix
   ./services/x11/xserver.nix
   ./system/activation/activation-script.nix
   ./system/activation/top-level.nix
