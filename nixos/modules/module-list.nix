@@ -688,8 +688,6 @@
   ./virtualisation/openvswitch.nix
   ./virtualisation/parallels-guest.nix
   ./virtualisation/rkt.nix
-  ./virtualisation/virtualbox-guest.nix
-  ./virtualisation/virtualbox-host.nix
   ./virtualisation/xen-dom0.nix
   ./virtualisation/xe-guest-utilities.nix
   ./virtualisation/openstack/keystone.nix
