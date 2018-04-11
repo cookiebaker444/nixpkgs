@@ -5,7 +5,6 @@
   ./config/krb5.nix
   ./config/ldap.nix
   ./config/networking.nix
-  ./config/no-x-libs.nix
   ./config/nsswitch.nix
   ./config/power-management.nix
   ./config/shells-environment.nix
