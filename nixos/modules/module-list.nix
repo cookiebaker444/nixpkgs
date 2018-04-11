@@ -686,7 +686,6 @@
   ./virtualisation/lxd.nix
   ./virtualisation/amazon-options.nix
   ./virtualisation/openvswitch.nix
-  ./virtualisation/parallels-guest.nix
   ./virtualisation/rkt.nix
   ./virtualisation/xen-dom0.nix
   ./virtualisation/xe-guest-utilities.nix
