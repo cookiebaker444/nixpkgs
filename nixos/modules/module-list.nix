@@ -105,7 +105,6 @@
   ./programs/zsh/oh-my-zsh.nix
   ./programs/zsh/zsh.nix
   ./programs/zsh/zsh-syntax-highlighting.nix
-  ./rename.nix
   ./security/acme.nix
   ./security/apparmor.nix
   ./security/apparmor-suid.nix
