@@ -156,6 +156,7 @@
   ./services/scheduling/marathon.nix
   ./services/security/fprintd.nix
   ./services/security/haveged.nix
+  ./services/monitoring/smartd.nix
   ./services/system/cgmanager.nix
   ./services/system/cloud-init.nix
   ./services/system/dbus.nix
