@@ -8,7 +8,6 @@
   ./config/no-x-libs.nix
   ./config/nsswitch.nix
   ./config/power-management.nix
-  ./config/pulseaudio.nix
   ./config/shells-environment.nix
   ./config/swap.nix
   ./config/sysctl.nix
