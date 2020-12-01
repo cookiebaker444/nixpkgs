@@ -67,9 +67,9 @@ let
       plugins = mkOption {
         type = types.listOf (types.enum [
           "cert.der" "cert.pem" "chain.pem" "external.sh"
-          "fullchain.pem" "full.pem" "key.der" "key.pem" "account_key.json"
+          "fullchain.pem" "full.pem" "key.der" "key.pem" "account_key.json" "account_reg.json"
         ]);
-        default = [ "fullchain.pem" "full.pem" "key.pem" "account_key.json" ];
+        default = [ "fullchain.pem" "full.pem" "key.pem" "account_key.json" "account_reg.json" ];
         description = ''
           Plugins to enable. With default settings simp_le will
           store public certificate bundle in <filename>fullchain.pem</filename>,
@@ -196,7 +196,7 @@ in
               let
                 cpath = "${cfg.directory}/${cert}";
                 rights = if data.allowKeysForGroup then "750" else "700";
-                cmdline = [ "-v" "-d" data.domain "--default_root" data.webroot "--valid_min" cfg.validMin "--tos_sha256" cfg.tosHash ]
+                cmdline = [ "-v" "-d" data.domain "--default_root" data.webroot "--valid_min" cfg.validMin ]
                           ++ optionals (data.email != null) [ "--email" data.email ]
                           ++ concatMap (p: [ "-f" p ]) data.plugins
                           ++ concatLists (mapAttrsToList (name: root: [ "-d" (if root == null then name else "${name}:${root}")]) data.extraDomains)
