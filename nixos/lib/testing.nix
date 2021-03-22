@@ -76,6 +76,14 @@ in rec {
             mkdir -p $out/coverage-data
             mv $i $out/coverage-data/$(dirname $(dirname $i))
           done
+
+          mkdir -p "$out/logs"
+          for directory in vm-state-*; do
+            name="''${directory#vm-state-}"
+            if [ -d "$directory/xchg/logs" ]; then
+              mv "$directory/xchg/logs" "$out/logs/$name"
+            fi
+          done
         '';
     };
 
