@@ -7,7 +7,7 @@ let
   repositoryDirectory = "${workingDirectory}/repo";
   outPath = "${workingDirectory}/system";
 
-  gitWithRepo = "${pkgs.git}/bin/git -C ${repositoryDirectory}";
+  gitWithRepo = "git -C ${repositoryDirectory}";
 
   renderNixArgs = args:
     let
@@ -25,7 +25,7 @@ in {
     nixFile = lib.mkOption {
       type = lib.types.path;
 
-      default = "/default.nix"
+      default = "/default.nix";
 
       description = ''
       Path to nix file in repository. Leading '/' refers to root of
@@ -238,7 +238,7 @@ in {
         (makeOptionsModule "local" localOptions)
         (makeOptionsModule "ssh"     sshOptions)
         (makeOptionsModule "http"   httpOptions)
-        (makeOPtionsModule "ftp"     ftpOptions)
+        (makeOptionsModule "ftp"     ftpOptions)
         (makeOptionsModule "git"     gitOptions)
       ];
     };
@@ -281,12 +281,16 @@ in {
       wantedBy = [ "multi-user.target" ];
 
       requires = config.mkIf (cfg.repository.protocol != "local") [ "network-online.target" ];
-
+      
       environment.GIT_SSH_COMMAND =
-        config.mkIf (cfg.repository.protocol == "ssh" && !(isNull cfg.repository.sshKeyFile)
+        config.mkIf (cfg.repository.protocol == "ssh" && !(isNull cfg.repository.sshKeyFile))
           "${pkgs.openssh}/bin/ssh -i ${lib.escapeShellArg cfg.repository.sshKeyFile}";
-
+                     
       serviceConfig.X-RestartIfChanged = false;
+
+      path = with pkgs; [
+        git nix systemd
+      ];
 
       script = let
         buildGitSuffix = repository: with repository;
@@ -301,11 +305,11 @@ in {
         }."${protocol}";
       in ''
       if [ ! -e ${workingDirectory} ]; then
-        ${pkgs.coreutils}/bin/mkdir --parents ${workingDirectory}
+        mkdir --parents ${workingDirectory}
       fi
 
       if [ ! -e ${repositoryDirectory} ]; then
-        ${pkgs.git}/bin/git clone ${lib.cli.toGNUCommandLineShell {} {
+        git clone ${lib.cli.toGNUCommandLineShell {} {
           local = (cfg.repository.protocol == "local");
         }} ${lib.escapeShellArg (buildGitUrl cfg.repository)} ${repositoryDirectory}
       fi
@@ -314,21 +318,21 @@ in {
 
       ${gitWithRepo} checkout FETCH_HEAD
 
-      ${pkgs.nix}/bin/nix-build${renderNixArgs cfg.nixArgs} ${lib.cli.toGNUCommandLineShell {} {
+      nix-build${renderNixArgs cfg.nixArgs} ${lib.cli.toGNUCommandLineShell {} {
         attr = cfg.nixAttribute;
         out-link = outPath;                       
-      }} ${lib.escapeShellArg "${repositoryDirectory}${nixFile}"}
+      }} ${lib.escapeShellArg "${repositoryDirectory}${cfg.nixFile}"}
 
       ${lib.optionalString (cfg.nixCommand != "test")
-        "${pkgs.nix}/bin/nix-env --profile /nix/var/nix/profiles/system --set ${outPath}"}
+        "nix-env --profile /nix/var/nix/profiles/system --set ${outPath}"}
 
-      ${pkgs.coreutils}/bin/rm ${outPath}
+      rm ${outPath}
 
       ${gitWithRepo} gc --prune=all
 
       ${outPath}/bin/switch-to-configuration ${cfg.nixCommand}
 
-      ${lib.optionalString (cfg.nixCommand == "boot") "${pkgs.systemd}/bin/systemctl reboot"}
+      ${lib.optionalString (cfg.nixCommand == "boot") "systemctl reboot"}
       '';
     };
   };
