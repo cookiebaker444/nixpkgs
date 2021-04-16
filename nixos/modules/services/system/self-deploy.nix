@@ -33,7 +33,7 @@ in {
       '';
     };
 
-    attribute = lib.mkOption {
+    nixAttribute = lib.mkOption {
       type = lib.types.str;
 
       description = ''
@@ -41,7 +41,7 @@ in {
       '';
     };
 
-    args = lib.mkOption {
+    nixArgs = lib.mkOption {
       type = lib.types.attrs;
 
       default = {};
@@ -52,13 +52,13 @@ in {
       '';
     };
 
-    command = lib.mkOption {
+    switchCommand = lib.mkOption {
       type = lib.types.enum [ "boot" "switch" "dry-activate" "test" ];
 
       default = "switch";
 
       description = ''
-      The `switch-to-configuration` command used.
+      The `switch-to-configuration` subcommand used.
       '';
     };
 
@@ -314,21 +314,21 @@ in {
 
       ${gitWithRepo} checkout FETCH_HEAD
 
-      ${pkgs.nix}/bin/nix-build${renderNixArgs cfg.args} ${lib.cli.toGNUCommandLineShell {} {
-        attr = cfg.attribute;
+      ${pkgs.nix}/bin/nix-build${renderNixArgs cfg.nixArgs} ${lib.cli.toGNUCommandLineShell {} {
+        attr = cfg.nixAttribute;
         out-link = outPath;                       
       }} ${lib.escapeShellArg "${repositoryDirectory}${nixFile}"}
 
-      ${lib.optionalString (cfg.command != "test")
+      ${lib.optionalString (cfg.nixCommand != "test")
         "${pkgs.nix}/bin/nix-env --profile /nix/var/nix/profiles/system --set ${outPath}"}
 
       ${pkgs.coreutils}/bin/rm ${outPath}
 
       ${gitWithRepo} gc --prune=all
 
-      ${outPath}/bin/switch-to-configuration switch
+      ${outPath}/bin/switch-to-configuration ${cfg.nixCommand}
 
-      ${lib.optionalString (cfg.command == "boot") "${pkgs.systemd}/bin/systemctl reboot"}
+      ${lib.optionalString (cfg.nixCommand == "boot") "${pkgs.systemd}/bin/systemctl reboot"}
       '';
     };
   };
