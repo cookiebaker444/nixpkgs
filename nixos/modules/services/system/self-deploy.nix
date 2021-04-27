@@ -143,19 +143,18 @@ in {
       fi
 
       if [ ! -e ${repositoryDirectory} ]; then
-        git clone ${lib.cli.toGNUCommandLineShell {} {
-          inherit (cfg) local;
-        }} ${lib.escapeShellArg cfg.repository} ${repositoryDirectory}
+        git clone ${lib.optionalString (isPathType cfg.repository) "--local"} \
+          ${lib.escapeShellArg cfg.repository} ${repositoryDirectory}
       fi
 
       ${gitWithRepo} fetch ${lib.escapeShellArg cfg.branch}
 
       ${gitWithRepo} checkout FETCH_HEAD
 
-      nix-build${renderNixArgs cfg.nixArgs} ${lib.cli.toGNUCommandLineShell {} {
-        attr = cfg.nixAttribute;
-        out-link = outPath;                       
-      }} ${lib.escapeShellArg "${repositoryDirectory}${cfg.nixFile}"}
+      nix-build${renderNixArgs cfg.nixArgs} \
+        --attr ${lib.escapeShellArg cfg.nixAttribute} \
+        --out-link ${lib.escapeShellArg outPath} \
+        ${lib.escapeShellArg "${repositoryDirectory}${cfg.nixFile}"}
 
       ${lib.optionalString (cfg.nixCommand != "test")
         "nix-env --profile /nix/var/nix/profiles/system --set ${outPath}"}
