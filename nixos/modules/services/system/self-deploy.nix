@@ -292,48 +292,49 @@ in {
         git nix systemd
       ];
 
-      script = let
-        buildGitSuffix = repository: with repository;
-          "${host}${lib.optionalString (!(isNull port)) ":${toString port}"}${path}";
+      script = "";
+      # script = let
+      #   buildGitSuffix = repository: with repository;
+      #     "${host}${lib.optionalString (!(isNull port)) ":${toString port}"}${path}";
 
-        buildGitUrl = repository: with repository; {
-          "local" = "file://${path}";
-          "ssh" = "ssh://${user}@${buildGitSuffix repository}";
-          "http" = "http${lib.optionalString secure "s"}://${buildGitSuffix repository}";
-          "ftp" = "ftp${lib.optionalString secure "s"}://${buildGitSuffix repository}";
-          "git" = "git://${buildGitSuffix repository}";
-        }."${protocol}";
-      in ''
-      if [ ! -e ${workingDirectory} ]; then
-        mkdir --parents ${workingDirectory}
-      fi
+      #   buildGitUrl = repository: with repository; {
+      #     "local" = "file://${path}";
+      #     "ssh" = "ssh://${user}@${buildGitSuffix repository}";
+      #     "http" = "http${lib.optionalString secure "s"}://${buildGitSuffix repository}";
+      #     "ftp" = "ftp${lib.optionalString secure "s"}://${buildGitSuffix repository}";
+      #     "git" = "git://${buildGitSuffix repository}";
+      #   }."${protocol}";
+      # in ''
+      # if [ ! -e ${workingDirectory} ]; then
+      #   mkdir --parents ${workingDirectory}
+      # fi
 
-      if [ ! -e ${repositoryDirectory} ]; then
-        git clone ${lib.cli.toGNUCommandLineShell {} {
-          local = (cfg.repository.protocol == "local");
-        }} ${lib.escapeShellArg (buildGitUrl cfg.repository)} ${repositoryDirectory}
-      fi
+      # if [ ! -e ${repositoryDirectory} ]; then
+      #   git clone ${lib.cli.toGNUCommandLineShell {} {
+      #     local = (cfg.repository.protocol == "local");
+      #   }} ${lib.escapeShellArg (buildGitUrl cfg.repository)} ${repositoryDirectory}
+      # fi
 
-      ${gitWithRepo} fetch ${lib.escapeShellArg cfg.branch}
+      # ${gitWithRepo} fetch ${lib.escapeShellArg cfg.branch}
 
-      ${gitWithRepo} checkout FETCH_HEAD
+      # ${gitWithRepo} checkout FETCH_HEAD
 
-      nix-build${renderNixArgs cfg.nixArgs} ${lib.cli.toGNUCommandLineShell {} {
-        attr = cfg.nixAttribute;
-        out-link = outPath;                       
-      }} ${lib.escapeShellArg "${repositoryDirectory}${cfg.nixFile}"}
+      # nix-build${renderNixArgs cfg.nixArgs} ${lib.cli.toGNUCommandLineShell {} {
+      #   attr = cfg.nixAttribute;
+      #   out-link = outPath;                       
+      # }} ${lib.escapeShellArg "${repositoryDirectory}${cfg.nixFile}"}
 
-      ${lib.optionalString (cfg.nixCommand != "test")
-        "nix-env --profile /nix/var/nix/profiles/system --set ${outPath}"}
+      # ${lib.optionalString (cfg.nixCommand != "test")
+      #   "nix-env --profile /nix/var/nix/profiles/system --set ${outPath}"}
 
-      rm ${outPath}
+      # rm ${outPath}
 
-      ${gitWithRepo} gc --prune=all
+      # ${gitWithRepo} gc --prune=all
 
-      ${outPath}/bin/switch-to-configuration ${cfg.nixCommand}
+      # ${outPath}/bin/switch-to-configuration ${cfg.nixCommand}
 
-      ${lib.optionalString (cfg.nixCommand == "boot") "systemctl reboot"}
-      '';
+      # ${lib.optionalString (cfg.nixCommand == "boot") "systemctl reboot"}
+      # '';
     };
   };
 }
