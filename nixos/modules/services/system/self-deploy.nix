@@ -156,16 +156,16 @@ in {
         --out-link ${lib.escapeShellArg outPath} \
         ${lib.escapeShellArg "${repositoryDirectory}${cfg.nixFile}"}
 
-      ${lib.optionalString (cfg.nixCommand != "test")
+      ${lib.optionalString (cfg.switchCommand != "test")
         "nix-env --profile /nix/var/nix/profiles/system --set ${outPath}"}
 
       rm ${outPath}
 
       ${gitWithRepo} gc --prune=all
 
-      ${outPath}/bin/switch-to-configuration ${cfg.nixCommand}
+      ${outPath}/bin/switch-to-configuration ${cfg.switchCommand}
 
-      ${lib.optionalString (cfg.nixCommand == "boot") "systemctl reboot"}
+      ${lib.optionalString (cfg.switchCommand == "boot") "systemctl reboot"}
       '';
     };
   };
