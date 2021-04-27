@@ -280,7 +280,7 @@ in {
     systemd.services.self-deploy = {
       wantedBy = [ "multi-user.target" ];
 
-      requires = config.mkIf (cfg.repository.protocol != "local") [ "network-online.target" ];
+      requires = lib.mkIf (cfg.repository.protocol != "local") [ "network-online.target" ];
       
       environment.GIT_SSH_COMMAND =
         config.mkIf (cfg.repository.protocol == "ssh" && !(isNull cfg.repository.sshKeyFile))
