@@ -92,14 +92,10 @@ in {
     branch = lib.mkOption {
       type = lib.types.str;
 
-      default = "origin/master";
+      default = "master";
 
       description = ''
       Branch to track
-      
-      Carefully note that this service does not push or pull branches, so
-      if you want to track a remote branch you want to prefix your branch 
-      with `origin/` (e.g. `origin/master`).
       
       You can also specify a revision or tag, too, if you want to pin this
       machine to a specific commit.
@@ -147,7 +143,7 @@ in {
           ${lib.escapeShellArg cfg.repository} ${repositoryDirectory}
       fi
 
-      ${gitWithRepo} fetch ${lib.escapeShellArg cfg.branch}
+      ${gitWithRepo} fetch origin ${lib.escapeShellArg cfg.branch}
 
       ${gitWithRepo} checkout FETCH_HEAD
 
@@ -159,13 +155,13 @@ in {
       ${lib.optionalString (cfg.switchCommand != "test")
         "nix-env --profile /nix/var/nix/profiles/system --set ${outPath}"}
 
-      rm ${outPath}
-
-      ${gitWithRepo} gc --prune=all
-
       ${outPath}/bin/switch-to-configuration ${cfg.switchCommand}
 
       ${lib.optionalString (cfg.switchCommand == "boot") "systemctl reboot"}
+
+      rm ${outPath}
+
+      ${gitWithRepo} gc --prune=all
       '';
     };
   };
