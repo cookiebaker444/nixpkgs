@@ -18,6 +18,8 @@ let
     in
       lib.concatStrings (lib.mapAttrsToList toArg args);
 
+  isPathType = x: lib.strings.isCoercibleToString x && builtins.substring 0 1 (toString x) == "/";
+
 in {
   options.services.self-deploy = {
     enable = lib.mkEnableOption "self-deploy";
@@ -62,239 +64,31 @@ in {
       '';
     };
 
-    repository = let
-      buildGitSuffix = repository: with repository;
-        "${host}${lib.optionalString (!(isNull port)) ":${toString port}"}${path}";
+    repository = lib.mkOption {
+      type = with lib.types; oneOf [ path str ];
 
-      makeProtocolOption = protocolName: lib.mkOption {
-        type = lib.types.enum [ protocolName ];
+      description = ''
+      The repository to fetch from. Must be properly formatted for git.
 
-        description = ''
-        Protocol used to clone the git repository.
-        '';
-      };
+      If this value is set to a path (must begin with `/`) then the
+      resulting service won't require the network to be up to run.
 
-      modules = {
-        local = { config, ... }: {
-          options = {
-            protocol = makeProtocolOption "local";
-
-            path = lib.mkOption {
-              type = lib.types.path;
-
-              description = ''
-              Path to local git repository.
-              '';
-            };
-          };
-
-          config = {
-            inherit (config) protocol;
-
-            gitUrl = with config;
-              "file://${path}";
-          };
-        };
-
-        ssh = { config, ... }: {
-          config = {
-            protocol = makeProtocolOption "ssh";
-            
-            user = lib.mkOption {
-              type = lib.types.str;
-
-              example = "git";
-
-              description = ''
-              SSH user used when connecting to git host.
-              '';
-            };
-            host = lib.mkOption {
-              type = lib.types.str;
-
-              example = "github.com";
-              
-              description = ''
-              SSH host.
-              '';
-            };
-            port = lib.mkOption {
-              type = with lib.types; nullOr port;
-
-              default = null;
-
-              description = ''
-              SSH port.
-              '';
-            };
-            path = lib.mkOption {
-              type = lib.types.path;
-
-              example = "/NixOS/nixpkgs.git";
-
-              description = ''
-              Path to git repository on SSH host.
-              '';
-            };
-
-            sshKeyFile = lib.mkOption {
-              type = with lib.types; nullOr path;
-
-              default = null;
-
-              description = ''
-              If necessary, the path to the SSH private key used to
-              fetch the git repository.
-              '';
-            };
-
-            config = {
-              inherit (config) protocol sshKeyFile;
-
-              gitUrl = with config;
-                "ssh://${user}@${buildGitSuffix config}";
-            };
-          };
-        };
-
-        http = { config, ... }: {
-          options = {
-            protocol = makeProtocolOption "http";
-            
-            secure = lib.mkOption {
-              type = lib.types.bool;
-
-              default = true;
-
-              description = ''
-              Whether to fetch over the HTTPS (HTTP Secure) protocol
-              or unsecured HTTP.
-              '';
-            };
-            host = lib.mkOption {
-              type = lib.types.str;
-
-              example = "github.com";
-              
-              description = ''
-              HTTP(S) host.
-              '';
-            };
-            port = lib.mkOption {
-              type = with lib.types; nullOr port;
-
-              description = ''
-              HTTP(S) port.
-              '';
-            };
-            path = lib.mkOption {
-              type = lib.types.path;
-
-              example = "/NixOS/nixpkgs.git";
-
-              description = ''
-              Path to git repository on HTTP(S) host.
-              '';
-            };
-          };
-
-          config = {
-            inherit (config) protocol;
-
-            gitUrl = with config;
-              "http${lib.optionalString secure "s"}://${buildGitSuffix config}";
-          };
-        };
-
-        ftp = { config, ... }: {
-          options = {
-            protocol = makeProtocolOption "ftp";
-
-            secure = lib.mkOption {
-              type = lib.types.bool;
-
-              default = false;
-
-              description = ''
-              Whether to fetch over the FTPS (FTP Secure) protocol
-              or unsecured FTP.
-              '';
-            };
-            host = lib.mkOption {
-              type = lib.types.str;
-              
-              description = ''
-              FTP(S) host.
-              '';
-            };
-            port = lib.mkOption {
-              type = lib.types.port;
-
-              description = ''
-              FTP(S) port.
-              '';
-            };
-            path = lib.mkOption {
-              type = lib.types.path;
-
-              description = ''
-              Path to git repository on FTP(S) host.
-              '';
-            };
-          };
-
-          config = {
-            inherit (config) protocol;
-
-            gitUrl = with config;
-              "ftp${lib.optionalString secure "s"}://${buildGitSuffix config}";
-          };
-        };
-
-        git = {
-          options = {
-            protocol = makeProtocolOption "git";
-
-            host = lib.mkOption {
-              type = lib.types.str;
-              
-              description = ''
-              Git protocol host.
-              '';
-            };
-            port = lib.mkOption {
-              type = lib.types.port;
-
-              description = ''
-              Git protocol port.
-              '';
-            };
-            path = lib.mkOption {
-              type = lib.types.path;
-
-              description = ''
-              Path to git repository on git host.
-              '';
-            };
-          };
-
-          config = {
-            inherit (config) protocol;
-
-            gitUrl = "git://${buildGitSuffix config}";
-          };
-        };
-      };
-    in lib.mkOption {
-      type = with lib.types; with modules; oneOf [
-        (submodule local)
-        (submodule ftp)
-        (submodule ssh)
-        (submodule http)
-        (submodule git)
-      ];
+      If the repository will be fetched over SSH, you should add an
+      entry to `programs.ssh.knownHosts` for it.
+      '';
     };
 
+    sshKeyFile = lib.mkOption {
+      type = with lib.types; nullOr path;
+
+      default = null;
+
+      description = ''
+      Path to SSH private key used to fetch private repositories over
+      SSH.
+      '';
+    };
+    
     branch = lib.mkOption {
       type = lib.types.str;
 
@@ -332,11 +126,10 @@ in {
     systemd.services.self-deploy = {
       wantedBy = [ "multi-user.target" ];
 
-      requires = lib.mkIf (cfg.repository.protocol != "local") [ "network-online.target" ];
+      requires = lib.mkIf (!(isPathType cfg.repository)) [ "network-online.target" ];
       
-      environment.GIT_SSH_COMMAND =
-        config.mkIf (cfg.repository.protocol == "ssh" && !(isNull cfg.repository.sshKeyFile))
-          "${pkgs.openssh}/bin/ssh -i ${lib.escapeShellArg cfg.repository.sshKeyFile}";
+      environment.GIT_SSH_COMMAND = lib.mkIf (!(isNull cfg.sshKeyFile))
+        "${pkgs.openssh}/bin/ssh -i ${lib.escapeShellArg cfg.sshKeyFile}";
                      
       serviceConfig.X-RestartIfChanged = false;
 
@@ -351,8 +144,8 @@ in {
 
       if [ ! -e ${repositoryDirectory} ]; then
         git clone ${lib.cli.toGNUCommandLineShell {} {
-          local = (cfg.repository.protocol == "local");
-        }} ${lib.escapeShellArg cfg.repository.gitUrl} ${repositoryDirectory}
+          inherit (cfg) local;
+        }} ${lib.escapeShellArg cfg.repository} ${repositoryDirectory}
       fi
 
       ${gitWithRepo} fetch ${lib.escapeShellArg cfg.branch}
