@@ -76,6 +76,24 @@ in {
                 '';
               };
             };
+
+            config = let
+              buildGitSuffix = repository: with repository;
+                "${host}${lib.optionalString (!(isNull port)) ":${toString port}"}${path}";
+
+              buildGitUrl = repository: with repository; {
+                "local" = "file://${path}";
+                "ssh" = "ssh://${user}@${buildGitSuffix repository}";
+                "http" = "http${lib.optionalString secure "s"}://${buildGitSuffix repository}";
+                "ftp" = "ftp${lib.optionalString secure "s"}://${buildGitSuffix repository}";
+                "git" = "git://${buildGitSuffix repository}";
+              }."${protocol}";
+            in {
+              inherit (config) protocol;
+              sshKeyFile = lib.mkIf (config.protocol == "ssh") config.sshKeyFile;
+              
+              gitUrl = buildGitUrl config;
+            };
           }                                                           
         );
 
@@ -292,18 +310,7 @@ in {
         git nix systemd
       ];
 
-      script = let
-        buildGitSuffix = repository: with repository;
-          "${host}${lib.optionalString (!(isNull port)) ":${toString port}"}${path}";
-
-        buildGitUrl = repository: with repository; {
-          "local" = "file://${path}";
-          "ssh" = "ssh://${user}@${buildGitSuffix repository}";
-          "http" = "http${lib.optionalString secure "s"}://${buildGitSuffix repository}";
-          "ftp" = "ftp${lib.optionalString secure "s"}://${buildGitSuffix repository}";
-          "git" = "git://${buildGitSuffix repository}";
-        }."${protocol}";
-      in ''
+      script = ''
       if [ ! -e ${workingDirectory} ]; then
         mkdir --parents ${workingDirectory}
       fi
@@ -311,7 +318,7 @@ in {
       if [ ! -e ${repositoryDirectory} ]; then
         git clone ${lib.cli.toGNUCommandLineShell {} {
           local = (cfg.repository.protocol == "local");
-        }} ${lib.escapeShellArg (buildGitUrl cfg.repository)} ${repositoryDirectory}
+        }} ${lib.escapeShellArg cfg.repository.gitUrl} ${repositoryDirectory}
       fi
 
       ${gitWithRepo} fetch ${lib.escapeShellArg cfg.branch}
