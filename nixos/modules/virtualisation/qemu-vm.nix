@@ -82,7 +82,7 @@ let
       NIX_DISK_IMAGE=$(readlink -f ''${NIX_DISK_IMAGE:-${config.virtualisation.diskImage}})
 
       if ! test -e "$NIX_DISK_IMAGE"; then
-          ${qemu}/bin/qemu-img create -f qcow2 "$NIX_DISK_IMAGE" \
+          ${qemu}/bin/qemu-img create -f raw -o preallocation=full "$NIX_DISK_IMAGE" \
             ${toString config.virtualisation.diskSize}M || exit 1
       fi
 
@@ -228,7 +228,7 @@ in
 
     virtualisation.diskImage =
       mkOption {
-        default = "./${vmName}.qcow2";
+        default = "./${vmName}.img";
         description =
           ''
             Path to the disk image containing the root filesystem.
@@ -521,7 +521,8 @@ in
       (mkIf cfg.useBootLoader [
         {
           file = "$NIX_DISK_IMAGE";
-          driveExtraOpts.cache = "writeback";
+          driveExtraOpts.cache = "none";
+          driveExtraOpts.aio = "native";
           driveExtraOpts.werror = "report";
         }
         {
@@ -533,7 +534,8 @@ in
       (mkIf (!cfg.useBootLoader) [
         {
           file = "$NIX_DISK_IMAGE";
-          driveExtraOpts.cache = "writeback";
+          driveExtraOpts.cache = "none";
+          driveExtraOpts.aio = "native";
           driveExtraOpts.werror = "report";
         }
       ])
