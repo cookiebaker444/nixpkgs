@@ -8852,6 +8852,8 @@ in {
 
   spacy-legacy = callPackage ../development/python-modules/spacy/legacy.nix { };
 
+  spacy-loggers = callPackage ../development/python-modules/spacy-loggers { };
+
   spacy_models = callPackage ../development/python-modules/spacy/models.nix { };
 
   spacy-pkuseg = callPackage ../development/python-modules/spacy-pkuseg { };
