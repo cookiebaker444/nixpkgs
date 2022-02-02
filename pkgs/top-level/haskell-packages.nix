@@ -12,10 +12,12 @@ let
     "ghcjs810"
     "integer-simple"
     "native-bignum"
+    "ghc921"
     "ghcHEAD"
   ];
 
   nativeBignumIncludes = [
+    "ghc921"
     "ghcHEAD"
   ];
 
@@ -139,6 +141,21 @@ in {
       buildLlvmPackages = buildPackages.llvmPackages_9;
       llvmPackages = pkgs.llvmPackages_9;
     };
+    ghc921 = callPackage ../development/compilers/ghc/9.2.1.nix {
+      bootPkgs =
+        # aarch64 ghc8107Binary exceeds max output size on hydra
+        if stdenv.isAarch64 || stdenv.isAarch32 then
+          packages.ghc8107BinaryMinimal
+        else
+          packages.ghc8107Binary;
+      inherit (buildPackages.python3Packages) sphinx;
+      # Need to use apple's patched xattr until
+      # https://github.com/xattr/xattr/issues/44 and
+      # https://github.com/xattr/xattr/issues/55 are solved.
+      inherit (buildPackages.darwin) xattr autoSignDarwinBinariesHook;
+      buildTargetLlvmPackages = pkgsBuildTarget.llvmPackages_12;
+      llvmPackages = pkgs.llvmPackages_12;
+    };
     ghcHEAD = callPackage ../development/compilers/ghc/head.nix {
       bootPkgs = packages.ghc883; # no binary yet
       inherit (buildPackages.python3Packages) sphinx;
@@ -255,6 +272,11 @@ in {
       buildHaskellPackages = bh.packages.ghc8107;
       ghc = bh.compiler.ghc8107;
       compilerConfig = callPackage ../development/haskell-modules/configuration-ghc-8.10.x.nix { };
+    };
+    ghc921 = callPackage ../development/haskell-modules {
+      buildHaskellPackages = bh.packages.ghc921;
+      ghc = bh.compiler.ghc921;
+      compilerConfig = callPackage ../development/haskell-modules/configuration-ghc-9.2.x.nix { };
     };
     ghcHEAD = callPackage ../development/haskell-modules {
       buildHaskellPackages = bh.packages.ghcHEAD;
