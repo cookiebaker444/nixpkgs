@@ -87,123 +87,131 @@ let
   # copy what we need.  Instead of using statically linked binaries,
   # we just copy what we need from Glibc and use patchelf to make it
   # work.
+  extraUtilsCopyScript = ''
+    set +o pipefail
+
+    mkdir -p $out/bin $out/lib
+    ln -s $out/bin $out/sbin
+
+    copy_bin_and_libs () {
+      [ -f "$out/bin/$(basename $1)" ] && rm "$out/bin/$(basename $1)"
+      cp -pdv $1 $out/bin
+    }
+
+    # Copy BusyBox.
+    for BIN in ${pkgs.busybox}/{s,}bin/*; do
+      copy_bin_and_libs $BIN
+    done
+
+    # Copy some utillinux stuff.
+    copy_bin_and_libs ${pkgs.utillinux}/sbin/blkid
+
+    # Copy dmsetup and lvm.
+    copy_bin_and_libs ${getBin pkgs.lvm2}/bin/dmsetup
+    copy_bin_and_libs ${getBin pkgs.lvm2}/bin/lvm
+
+    # Add RAID mdadm tool.
+    copy_bin_and_libs ${pkgs.mdadm}/sbin/mdadm
+    copy_bin_and_libs ${pkgs.mdadm}/sbin/mdmon
+
+    # Copy udev.
+    copy_bin_and_libs ${udev}/bin/udevadm
+    copy_bin_and_libs ${udev}/lib/systemd/systemd-sysctl
+    for BIN in ${udev}/lib/udev/*_id; do
+      copy_bin_and_libs $BIN
+    done
+    # systemd-udevd is only a symlink to udevadm these days
+    ln -sf udevadm $out/bin/systemd-udevd
+
+    # Copy modprobe.
+    copy_bin_and_libs ${pkgs.kmod}/bin/kmod
+    ln -sf kmod $out/bin/modprobe
+
+    # Copy resize2fs if any ext* filesystems are to be resized
+    ${optionalString (any (fs: fs.autoResize && (lib.hasPrefix "ext" fs.fsType)) fileSystems) ''
+      # We need mke2fs in the initrd.
+      copy_bin_and_libs ${pkgs.e2fsprogs}/sbin/resize2fs
+    ''}
+
+    # Copy secrets if needed.
+    #
+    # TODO: move out to a separate script; see #85000.
+    ${optionalString (!config.boot.loader.supportsInitrdSecrets)
+        (concatStringsSep "\n" (mapAttrsToList (dest: source:
+           let source' = if source == null then dest else source; in
+             ''
+                mkdir -p $(dirname "$out/secrets/${dest}")
+                # Some programs (e.g. ssh) doesn't like secrets to be
+                # symlinks, so we use `cp -L` here to match the
+                # behaviour when secrets are natively supported.
+                cp -Lr ${source'} "$out/secrets/${dest}"
+              ''
+        ) config.boot.initrd.secrets))
+     }
+
+    ${config.boot.initrd.extraUtilsCommands}
+
+    # Copy ld manually since it isn't detected correctly
+    cp -pv ${pkgs.stdenv.cc.libc.out}/lib/ld*.so.? $out/lib
+
+    # Copy all of the needed libraries
+    find $out/bin $out/lib -type f | while read BIN; do
+      echo "Copying libs for executable $BIN"
+      for LIB in $(${findLibs}/bin/find-libs $BIN); do
+        TGT="$out/lib/$(basename $LIB)"
+        if [ ! -f "$TGT" ]; then
+          SRC="$(readlink -e $LIB)"
+          cp -pdv "$SRC" "$TGT"
+        fi
+      done
+    done
+  '';
+
+  extraUtilsStripScript = ''
+    # Strip binaries further than normal.
+    chmod -R u+w $out
+    stripDirs "$STRIP" "lib bin" "-s"
+
+    # Run patchelf to make the programs refer to the copied libraries.
+    find $out/bin $out/lib -type f | while read i; do
+      if ! test -L $i; then
+        nuke-refs -e $out $i
+      fi
+    done
+
+    find $out/bin -type f | while read i; do
+      if ! test -L $i; then
+        echo "patching $i..."
+        patchelf --set-interpreter $out/lib/ld*.so.? --set-rpath $out/lib $i || true
+      fi
+    done
+
+    if [ -z "${toString (pkgs.stdenv.hostPlatform != pkgs.stdenv.buildPlatform)}" ]; then
+    # Make sure that the patchelf'ed binaries still work.
+    echo "testing patched programs..."
+    $out/bin/ash -c 'echo hello world' | grep "hello world"
+    export LD_LIBRARY_PATH=$out/lib
+    $out/bin/mount --help 2>&1 | grep -q "BusyBox"
+    $out/bin/blkid -V 2>&1 | grep -q 'libblkid'
+    $out/bin/udevadm --version
+    $out/bin/dmsetup --version 2>&1 | tee -a log | grep -q "version:"
+    LVM_SYSTEM_DIR=$out $out/bin/lvm version 2>&1 | tee -a log | grep -q "LVM"
+    $out/bin/mdadm --version
+
+    ${config.boot.initrd.extraUtilsCommandsTest}
+    fi
+  ''; # */
+
   extraUtils = pkgs.runCommandCC "extra-utils"
-    { nativeBuildInputs = [pkgs.buildPackages.nukeReferences];
+    {
+      nativeBuildInputs = [ pkgs.buildPackages.nukeReferences ];
       allowedReferences = [ "out" ]; # prevent accidents like glibc being included in the initrd
     }
-    ''
-      set +o pipefail
+    (extraUtilsCopyScript + extraUtilsStripScript);
 
-      mkdir -p $out/bin $out/lib
-      ln -s $out/bin $out/sbin
-
-      copy_bin_and_libs () {
-        [ -f "$out/bin/$(basename $1)" ] && rm "$out/bin/$(basename $1)"
-        cp -pdv $1 $out/bin
-      }
-
-      # Copy BusyBox.
-      for BIN in ${pkgs.busybox}/{s,}bin/*; do
-        copy_bin_and_libs $BIN
-      done
-
-      # Copy some utillinux stuff.
-      copy_bin_and_libs ${pkgs.utillinux}/sbin/blkid
-
-      # Copy dmsetup and lvm.
-      copy_bin_and_libs ${getBin pkgs.lvm2}/bin/dmsetup
-      copy_bin_and_libs ${getBin pkgs.lvm2}/bin/lvm
-
-      # Add RAID mdadm tool.
-      copy_bin_and_libs ${pkgs.mdadm}/sbin/mdadm
-      copy_bin_and_libs ${pkgs.mdadm}/sbin/mdmon
-
-      # Copy udev.
-      copy_bin_and_libs ${udev}/bin/udevadm
-      copy_bin_and_libs ${udev}/lib/systemd/systemd-sysctl
-      for BIN in ${udev}/lib/udev/*_id; do
-        copy_bin_and_libs $BIN
-      done
-      # systemd-udevd is only a symlink to udevadm these days
-      ln -sf udevadm $out/bin/systemd-udevd
-
-      # Copy modprobe.
-      copy_bin_and_libs ${pkgs.kmod}/bin/kmod
-      ln -sf kmod $out/bin/modprobe
-
-      # Copy resize2fs if any ext* filesystems are to be resized
-      ${optionalString (any (fs: fs.autoResize && (lib.hasPrefix "ext" fs.fsType)) fileSystems) ''
-        # We need mke2fs in the initrd.
-        copy_bin_and_libs ${pkgs.e2fsprogs}/sbin/resize2fs
-      ''}
-
-      # Copy secrets if needed.
-      #
-      # TODO: move out to a separate script; see #85000.
-      ${optionalString (!config.boot.loader.supportsInitrdSecrets)
-          (concatStringsSep "\n" (mapAttrsToList (dest: source:
-             let source' = if source == null then dest else source; in
-               ''
-                  mkdir -p $(dirname "$out/secrets/${dest}")
-                  # Some programs (e.g. ssh) doesn't like secrets to be
-                  # symlinks, so we use `cp -L` here to match the
-                  # behaviour when secrets are natively supported.
-                  cp -Lr ${source'} "$out/secrets/${dest}"
-                ''
-          ) config.boot.initrd.secrets))
-       }
-
-      ${config.boot.initrd.extraUtilsCommands}
-
-      # Copy ld manually since it isn't detected correctly
-      cp -pv ${pkgs.stdenv.cc.libc.out}/lib/ld*.so.? $out/lib
-
-      # Copy all of the needed libraries
-      find $out/bin $out/lib -type f | while read BIN; do
-        echo "Copying libs for executable $BIN"
-        for LIB in $(${findLibs}/bin/find-libs $BIN); do
-          TGT="$out/lib/$(basename $LIB)"
-          if [ ! -f "$TGT" ]; then
-            SRC="$(readlink -e $LIB)"
-            cp -pdv "$SRC" "$TGT"
-          fi
-        done
-      done
-
-      # Strip binaries further than normal.
-      chmod -R u+w $out
-      stripDirs "$STRIP" "lib bin" "-s"
-
-      # Run patchelf to make the programs refer to the copied libraries.
-      find $out/bin $out/lib -type f | while read i; do
-        if ! test -L $i; then
-          nuke-refs -e $out $i
-        fi
-      done
-
-      find $out/bin -type f | while read i; do
-        if ! test -L $i; then
-          echo "patching $i..."
-          patchelf --set-interpreter $out/lib/ld*.so.? --set-rpath $out/lib $i || true
-        fi
-      done
-
-      if [ -z "${toString (pkgs.stdenv.hostPlatform != pkgs.stdenv.buildPlatform)}" ]; then
-      # Make sure that the patchelf'ed binaries still work.
-      echo "testing patched programs..."
-      $out/bin/ash -c 'echo hello world' | grep "hello world"
-      export LD_LIBRARY_PATH=$out/lib
-      $out/bin/mount --help 2>&1 | grep -q "BusyBox"
-      $out/bin/blkid -V 2>&1 | grep -q 'libblkid'
-      $out/bin/udevadm --version
-      $out/bin/dmsetup --version 2>&1 | tee -a log | grep -q "version:"
-      LVM_SYSTEM_DIR=$out $out/bin/lvm version 2>&1 | tee -a log | grep -q "LVM"
-      $out/bin/mdadm --version
-
-      ${config.boot.initrd.extraUtilsCommandsTest}
-      fi
-    ''; # */
-
+  # Make an extra-utils package that has all dependencies un-nuked to
+  # keep track of build dependencies for stage-1.
+  extraUtilsFull = pkgs.runCommandCC "extra-utils-full" { } extraUtilsCopyScript;
 
   linkUnits = pkgs.runCommand "link-units" {
       allowedReferences = [ extraUtils ];
@@ -607,6 +615,8 @@ in
 
     system.build =
       { inherit bootStage1 initialRamdisk initialRamdiskSecretAppender extraUtils; };
+
+    nixpkgs.overlays = [(_: _: { inherit extraUtilsFull; })];
 
     system.requiredKernelConfig = with config.lib.kernelConfig; [
       (isYes "TMPFS")
