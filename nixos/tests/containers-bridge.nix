@@ -56,7 +56,7 @@ import ./make-test-python.nix ({ pkgs, lib, ... }: {
         };
 
 
-      virtualisation.additionalPaths = [ pkgs.stdenv ];
+      virtualisation.pathsInNixDB = [ pkgs.stdenv ];
     };
 
   testScript = ''
