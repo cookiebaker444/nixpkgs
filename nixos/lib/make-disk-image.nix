@@ -70,9 +70,6 @@
   # utils, but changes the hash of the image when the sources are
   # updated.
   copyChannel ? true
-
-, # Additional store paths to copy to the image's store.
-  additionalPaths ? []
 }:
 
 assert partitionTableType == "legacy" || partitionTableType == "legacy+gpt" || partitionTableType == "efi" || partitionTableType == "hybrid" || partitionTableType == "none";
@@ -175,13 +172,8 @@ let format' = format; in let
   users   = map (x: x.user  or "''") contents;
   groups  = map (x: x.group or "''") contents;
 
-  basePaths = [ config.system.build.toplevel ]
-    ++ lib.optional copyChannel channelSources;
-
-  additionalPaths' = subtractLists basePaths additionalPaths;
-
   closureInfo = pkgs.closureInfo {
-    rootPaths = basePaths ++ additionalPaths';
+    rootPaths = [ config.system.build.toplevel ] ++ (lib.optional copyChannel channelSources);
   };
 
   blockSize = toString (4 * 1024); # ext4fs block size (not block device sector size)
@@ -273,10 +265,6 @@ let format' = format; in let
       --system ${config.system.build.toplevel} \
       ${if copyChannel then "--channel ${channelSources}" else "--no-channel-copy"} \
       --substituters ""
-
-    ${optionalString (additionalPaths' != []) ''
-      nix copy --to $root --no-check-sigs ${concatStringsSep " " additionalPaths'}
-    ''}
 
     diskImage=nixos.raw
 
