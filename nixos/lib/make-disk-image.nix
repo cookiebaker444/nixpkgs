@@ -44,9 +44,6 @@
   #   most likely fails as GRUB will probably refuse to install.
   partitionTableType ? "legacy"
 
-, # Whether to invoke `switch-to-configuration boot` during image creation
-  installBootLoader ? true
-
 , # The root file system type.
   fsType ? "ext4"
 
@@ -371,13 +368,11 @@ in pkgs.vmTools.runInLinuxVM (
         cp ${configFile} /mnt/etc/nixos/configuration.nix
       ''}
 
-      ${lib.optionalString installBootLoader ''
-        # Set up core system link, GRUB, etc.
-        NIXOS_INSTALL_BOOTLOADER=1 nixos-enter --root $mountPoint -- /nix/var/nix/profiles/system/bin/switch-to-configuration boot
+      # Set up core system link, GRUB, etc.
+      NIXOS_INSTALL_BOOTLOADER=1 nixos-enter --root $mountPoint -- /nix/var/nix/profiles/system/bin/switch-to-configuration boot
 
-        # The above scripts will generate a random machine-id and we don't want to bake a single ID into all our images
-        rm -f $mountPoint/etc/machine-id
-      ''}
+      # The above scripts will generate a random machine-id and we don't want to bake a single ID into all our images
+      rm -f $mountPoint/etc/machine-id
 
       # Set the ownerships of the contents. The modes are set in preVM.
       # No globbing on targets, so no need to set -f
