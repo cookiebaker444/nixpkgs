@@ -64,12 +64,6 @@
 
 , # Disk image format, one of qcow2, qcow2-compressed, vdi, vpc, raw.
   format ? "raw"
-
-, # Whether a nix channel based on the current source tree should be
-  # made available inside the image. Useful for interactive use of nix
-  # utils, but changes the hash of the image when the sources are
-  # updated.
-  copyChannel ? true
 }:
 
 assert partitionTableType == "legacy" || partitionTableType == "legacy+gpt" || partitionTableType == "efi" || partitionTableType == "hybrid" || partitionTableType == "none";
@@ -172,9 +166,7 @@ let format' = format; in let
   users   = map (x: x.user  or "''") contents;
   groups  = map (x: x.group or "''") contents;
 
-  closureInfo = pkgs.closureInfo {
-    rootPaths = [ config.system.build.toplevel ] ++ (lib.optional copyChannel channelSources);
-  };
+  closureInfo = pkgs.closureInfo { rootPaths = [ config.system.build.toplevel channelSources ]; };
 
   blockSize = toString (4 * 1024); # ext4fs block size (not block device sector size)
 
@@ -262,9 +254,7 @@ let format' = format; in let
     chmod 755 "$TMPDIR"
     echo "running nixos-install..."
     nixos-install --root $root --no-bootloader --no-root-passwd \
-      --system ${config.system.build.toplevel} \
-      ${if copyChannel then "--channel ${channelSources}" else "--no-channel-copy"} \
-      --substituters ""
+      --system ${config.system.build.toplevel} --channel ${channelSources} --substituters ""
 
     diskImage=nixos.raw
 
