@@ -2800,6 +2800,8 @@ in {
 
   flask = callPackage ../development/python-modules/flask { };
 
+  flask_1 = callPackage ../development/python-modules/flask/1.nix { };
+
   flask-common = callPackage ../development/python-modules/flask-common { };
 
   flask-compress = callPackage ../development/python-modules/flask-compress { };
