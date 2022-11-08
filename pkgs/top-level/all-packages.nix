@@ -2404,6 +2404,8 @@ with pkgs;
 
   keystone = callPackage ../development/libraries/keystone { };
 
+  carbonapi = callPackage ../servers/monitoring/carbonapi { };
+
   casync = callPackage ../applications/networking/sync/casync {
     sphinx = python3Packages.sphinx;
   };
